@@ -2,17 +2,24 @@
 -- OPCIONAL: solo para entornos de desarrollo. Crea un api_client de prueba.
 -- NO ejecutar en produccion.
 --
--- Para generar el hash en local:
---   node -e "import('argon2').then(a => a.default.hash('dev-key-123').then(h => console.log(h)))"
--- y reemplazar abajo. Luego configurar el frontend con VITE_AI_SERVICE_API_KEY=dev-key-123.
+-- El api_key tiene formato: "<prefix>.<secret>"
+-- Para generar uno completo en local desde Node:
 --
--- Este archivo NO se aplica automaticamente; ejecutar manualmente cuando se necesite.
+--   node -e "
+--   const c = require('crypto');
+--   const a = require('argon2');
+--   const prefix = 'eai_' + c.randomBytes(6).toString('hex');
+--   const secret = c.randomBytes(24).toString('base64url');
+--   a.hash(secret).then(h => console.log({apiKey: prefix + '.' + secret, prefix, hash: h}));
+--   "
+--
+-- Luego usa el "apiKey" devuelto en el header X-Api-Key del frontend EMR
+-- y registra (prefix, hash) en la tabla.
 
--- Ejemplo (descomenta y rellena hash + jwks_url reales del Supabase del EMR):
---
--- insert into public.api_clients (name, api_key_hash, jwks_url, is_active)
+-- insert into public.api_clients (name, api_key_prefix, api_key_hash, jwks_url, is_active)
 -- values (
 --   'local-dev',
+--   'eai_xxxxxxxx',
 --   '$argon2id$v=19$m=65536,t=3,p=4$AAAA...',
 --   'https://your-emr-project.supabase.co/auth/v1/.well-known/jwks.json',
 --   true

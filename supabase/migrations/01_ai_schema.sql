@@ -10,18 +10,19 @@ create extension if not exists "pgcrypto";
 -- 1) Clientes (tenants) que tienen permitido consumir el AI service.
 -- ============================================================================
 create table if not exists public.api_clients (
-  id            uuid primary key default gen_random_uuid(),
-  name          text not null,
-  api_key_hash  text not null unique,
-  jwks_url      text not null,
-  audience      text,
-  is_active     boolean not null default true,
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  id              uuid primary key default gen_random_uuid(),
+  name            text not null,
+  api_key_prefix  text not null unique,
+  api_key_hash    text not null,
+  jwks_url        text not null,
+  audience        text,
+  is_active       boolean not null default true,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
 );
 
 comment on table public.api_clients is
-  'Tenants autorizados a consumir el AI service. api_key_hash usa argon2id; jwks_url apunta al Supabase del EMR cliente para verificar JWTs.';
+  'Tenants autorizados a consumir el AI service. El API key tiene formato "<prefix>.<secret>". El prefix se almacena en plano (indexado, unico) para resolver el tenant en O(1); el hash argon2id solo cubre el secret. jwks_url apunta al Supabase del EMR cliente para verificar JWTs.';
 
 -- ============================================================================
 -- 2) Resumenes generados (cache determinista).

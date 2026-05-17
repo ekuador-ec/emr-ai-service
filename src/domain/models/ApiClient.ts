@@ -1,6 +1,7 @@
 export interface ApiClient {
   id: string;
   name: string;
+  apiKeyPrefix: string;
   apiKeyHash: string;
   jwksUrl: string;
   audience: string | null;
