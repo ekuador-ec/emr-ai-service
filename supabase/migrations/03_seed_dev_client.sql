@@ -1,0 +1,19 @@
+-- Migration: 03_seed_dev_client.sql
+-- OPCIONAL: solo para entornos de desarrollo. Crea un api_client de prueba.
+-- NO ejecutar en produccion.
+--
+-- Para generar el hash en local:
+--   node -e "import('argon2').then(a => a.default.hash('dev-key-123').then(h => console.log(h)))"
+-- y reemplazar abajo. Luego configurar el frontend con VITE_AI_SERVICE_API_KEY=dev-key-123.
+--
+-- Este archivo NO se aplica automaticamente; ejecutar manualmente cuando se necesite.
+
+-- Ejemplo (descomenta y rellena hash + jwks_url reales del Supabase del EMR):
+--
+-- insert into public.api_clients (name, api_key_hash, jwks_url, is_active)
+-- values (
+--   'local-dev',
+--   '$argon2id$v=19$m=65536,t=3,p=4$AAAA...',
+--   'https://your-emr-project.supabase.co/auth/v1/.well-known/jwks.json',
+--   true
+-- );
