@@ -15,7 +15,11 @@
     "lint:fix": "oxlint --fix .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "smoke": "tsx scripts/smoke-test.ts",
+    "openrouter:list": "tsx scripts/list-openrouter-free.ts",
+    "openrouter:probe": "tsx scripts/probe-openrouter-models.ts",
+    "client:create": "tsx scripts/create-api-client.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

@@ -33,12 +33,18 @@ pnpm dev
 ## Scripts
 
 ```bash
-pnpm dev         # tsx watch
-pnpm build       # tsc -p tsconfig.build.json
-pnpm start       # node dist/...
-pnpm lint        # oxlint .
-pnpm typecheck   # tsc --noEmit
-pnpm test        # vitest run
+pnpm dev               # tsx watch
+pnpm build             # tsc -p tsconfig.build.json
+pnpm start             # node dist/...
+pnpm lint              # oxlint .
+pnpm typecheck         # tsc --noEmit
+pnpm test              # vitest run
+
+# Operacion / diagnostico
+pnpm smoke             # smoke test end-to-end: Supabase + OpenRouter (+ DeepSeek opcional)
+pnpm openrouter:list   # lista los modelos :free disponibles en OpenRouter ahora mismo
+pnpm openrouter:probe  # prueba cada modelo del pool sugerido y reporta cuales responden
+pnpm client:create     # crea un api_client (tenant) en la DB y devuelve el API key plano UNA vez
 ```
 
 ## Arquitectura

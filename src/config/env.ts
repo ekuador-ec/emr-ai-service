@@ -25,7 +25,7 @@ const envSchema = z
     OPENROUTER_AUTO_MODELS: z
       .string()
       .default(
-        "deepseek/deepseek-chat-v3.1:free,google/gemini-2.0-flash-exp:free,meta-llama/llama-3.3-70b-instruct:free",
+        "deepseek/deepseek-v4-flash:free,openai/gpt-oss-120b:free,openai/gpt-oss-20b:free,qwen/qwen3-next-80b-a3b-instruct:free",
       ),
 
     PROMPT_VERSION_MEDICAL_RECORD: z.string().default("medical-record-v1"),
