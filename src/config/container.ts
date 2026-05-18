@@ -33,7 +33,7 @@ import { logger } from "../shared/logger.js";
 export function buildContainer(env: AppEnv): Express {
   const db = createSupabaseClient({
     url: env.SUPABASE_URL,
-    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY
+    secretKey: env.SUPABASE_SECRET_KEY
   });
 
   const apiClients = new SupabaseApiClientRepository({ db });

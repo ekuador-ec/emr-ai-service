@@ -52,7 +52,7 @@ Cuatro capas con dependencia unidireccional (`presentation -> application -> dom
 
 - **Nunca enviar PII al LLM**: el `ServerSanitizer` (capa infraestructura) recorre cada payload y aplica blacklist de keys + regex de cedula EC, email, telefono. Si encuentra match, lo reemplaza por `[REDACTED]` y lanza warning.
 - **Autenticacion en dos capas obligatoria**: todo endpoint protegido valida `X-Api-Key` (api_clients) **y** `Authorization: Bearer <jwt>` (JWKS del Supabase del cliente).
-- **Service role key de Supabase**: solo se usa server-side. Jamas se devuelve al cliente.
+- **Supabase secret key**: solo se usa server-side. Jamas se devuelve al cliente. Preferir la API key moderna `SUPABASE_SECRET_KEY` (formato `sb_secret_xxx`); si el proyecto Supabase aun no migra a las nuevas claves, `SUPABASE_SERVICE_ROLE_KEY` se acepta como fallback legacy. Ambas bypasan RLS, asi que el manejo es identico.
 - **Logs**: nunca loguear el body completo de requests con PII. Loguear `clientId`, `userId`, `kind`, `entityId` y hashes.
 
 ## Reglas de Persistencia
@@ -94,6 +94,8 @@ Antes de marcar una tarea como completada: ejecutar `pnpm lint` y `pnpm typechec
 ## Variables de Entorno
 
 Documentadas en `.env.example`. Validadas con Zod al boot del servidor en `src/config/env.ts`. Si una env requerida falta, el proceso debe abortar con mensaje claro en lugar de fallar en runtime.
+
+`SUPABASE_SECRET_KEY` es la API key moderna de Supabase (`sb_secret_xxx`). Si tu proyecto Supabase aun no migra a las nuevas API keys, define `SUPABASE_SERVICE_ROLE_KEY` (legacy JWT) y el schema la usara como fallback. Al menos una de las dos debe estar presente; si faltan ambas, el proceso aborta.
 
 ## Endpoints (referencia)
 

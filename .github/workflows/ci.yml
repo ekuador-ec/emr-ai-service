@@ -31,4 +31,4 @@ jobs:
         env:
           NODE_ENV: test
           SUPABASE_URL: https://example.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: test-key
+          SUPABASE_SECRET_KEY: sb_secret_test_value
