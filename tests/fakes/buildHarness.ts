@@ -36,13 +36,14 @@ export interface TestHarness {
 
 export interface BuildHarnessOptions {
   responder?: (input: { messages: Array<{ role: string; content: string }> }) => string;
-  promptVersions?: { medicalRecord: string; evolution: string; chat: string };
+  promptVersions?: { medicalRecord: string; evolution: string; chat: string; generalChat: string };
 }
 
 const DEFAULT_PROMPT_VERSIONS = {
   medicalRecord: "medical-record-v1",
   evolution: "evolution-v1",
-  chat: "chat-system-v1"
+  chat: "chat-system-v1",
+  generalChat: "general-chat-v1",
 };
 
 export function buildHarness(options: BuildHarnessOptions = {}): TestHarness {

@@ -1,8 +1,11 @@
 import type { LlmChatMessage } from "../../domain/services/LlmProvider.js";
 import type { SummaryKind } from "../../domain/models/Summary.js";
+import type { ConversationKind } from "../../domain/models/Conversation.js";
+
+export type PromptKind = SummaryKind | "chat" | "general_chat";
 
 export interface PromptTemplate {
-  kind: SummaryKind | "chat";
+  kind: PromptKind;
   version: string;
   system: string;
 }
@@ -11,7 +14,24 @@ export interface PromptVersions {
   medicalRecord: string;
   evolution: string;
   chat: string;
+  generalChat: string;
 }
+
+const MEDICAL_DOMAIN_GUARDRAIL = `RESTRICCION DE DOMINIO (INVIOLABLE):
+- Eres un asistente especializado UNICAMENTE en consultas medicas, clinicas
+  y de salud (anatomia, fisiologia, patologias, farmacologia, semiologia,
+  diagnostico diferencial, codificacion CIE-10, protocolos clinicos,
+  examenes complementarios, urgencias, salud publica, etica medica y
+  procesos administrativos clinicos como consultas, derivaciones, altas).
+- Si el usuario pregunta sobre temas NO medicos (programacion, entretenimiento,
+  deportes, politica, recetas, finanzas, viajes, traducciones generales,
+  curiosidades no clinicas, etc), responde EXACTAMENTE con este texto y nada
+  mas:
+  "Soy un asistente clinico especializado y solo puedo responder consultas
+  relacionadas con medicina y salud. Por favor reformula tu pregunta con un
+  enfoque medico o consulta otro recurso para temas fuera de este ambito."
+- No improvises excepciones. Si dudas si una pregunta es medica, asume que no
+  lo es y aplica la regla.`;
 
 const MEDICAL_RECORD_SYSTEM_PROMPT = `Eres un asistente clinico experto que ayuda a personal medico a leer rapidamente una Historia Clinica completa.
 Tu tarea es generar un resumen clinico estructurado en espanol, claro y conciso.
@@ -77,13 +97,29 @@ Indicaciones, tipo de alta y recomendaciones registradas.
 Alertas, inconsistencias o datos que el clinico deberia revisar.`;
 
 const CHAT_SYSTEM_PROMPT = `Eres un asistente clinico que conversa con personal medico sobre un caso clinico previamente resumido.
-Reglas estrictas:
+
+${MEDICAL_DOMAIN_GUARDRAIL}
+
+Reglas adicionales del modo "caso clinico":
 - Trabajas SIEMPRE con datos anonimizados; jamas solicites datos identificables del paciente.
 - Basa tus respuestas en el contexto del resumen y la conversacion previa. Si te falta informacion, dilo explicitamente.
 - No emitas diagnosticos definitivos por ti mismo: ofrece hipotesis, diagnosticos diferenciales y razonamientos.
 - Cita el codigo CIE-10 cuando se discutan patologias especificas.
 - Tu rol es apoyar el razonamiento clinico, no reemplazar el juicio del medico.
 - Responde en espanol, en un tono profesional, conciso y enfocado.`;
+
+const GENERAL_CHAT_SYSTEM_PROMPT = `Eres un asistente clinico de consulta general. El usuario es personal medico (medicos, enfermeria, residentes, internos) que te plantea dudas sobre medicina, salud, farmacologia, protocolos clinicos, codificacion CIE-10 y referencias academicas.
+
+${MEDICAL_DOMAIN_GUARDRAIL}
+
+Reglas adicionales del modo "consulta general":
+- No tienes contexto de un paciente especifico; si la pregunta del usuario describe un caso, asume que es hipotetico o academico y nunca solicites datos identificables (nombre, cedula, telefono, direccion).
+- Estructura las respuestas en Markdown cuando ayude a la claridad: encabezados breves, listas, codigos CIE-10 en \`backticks\`, doses y unidades con formato consistente.
+- Para diagnosticos diferenciales: ofrece una lista priorizada con criterios clave (epidemiologia, semiologia distintiva, examenes confirmatorios).
+- Para farmacologia: indica clase, mecanismo, dosis usual de adulto sano, ajustes en pediatria/embarazo/insuficiencia renal o hepatica cuando aplique, contraindicaciones e interacciones relevantes.
+- Cuando cites guias o estudios menciona el contexto (ej. "guia GES 2024", "criterios de Roma IV") sin inventar referencias precisas que no recuerdes con certeza.
+- Recordatorio explicito en cada respuesta sustantiva: el contenido es de apoyo y no reemplaza el juicio clinico ni la evaluacion presencial del paciente.
+- Responde en espanol, en tono profesional, conciso y enfocado.`;
 
 export class PromptBuilder {
   private readonly versions: PromptVersions;
@@ -92,12 +128,15 @@ export class PromptBuilder {
     this.versions = versions;
   }
 
-  getTemplate(kind: SummaryKind | "chat"): PromptTemplate {
+  getTemplate(kind: PromptKind): PromptTemplate {
     if (kind === "medical_record") {
       return { kind, version: this.versions.medicalRecord, system: MEDICAL_RECORD_SYSTEM_PROMPT };
     }
     if (kind === "evolution") {
       return { kind, version: this.versions.evolution, system: EVOLUTION_SYSTEM_PROMPT };
+    }
+    if (kind === "general_chat") {
+      return { kind, version: this.versions.generalChat, system: GENERAL_CHAT_SYSTEM_PROMPT };
     }
     return { kind: "chat", version: this.versions.chat, system: CHAT_SYSTEM_PROMPT };
   }
@@ -108,23 +147,26 @@ export class PromptBuilder {
       { role: "system", content: template.system },
       {
         role: "user",
-        content: `Contexto clinico anonimizado (JSON):\n\n\`\`\`json\n${JSON.stringify(sanitizedPayload, null, 2)}\n\`\`\`\n\nGenera el resumen siguiendo las instrucciones.`
-      }
+        content: `Contexto clinico anonimizado (JSON):\n\n\`\`\`json\n${JSON.stringify(sanitizedPayload, null, 2)}\n\`\`\`\n\nGenera el resumen siguiendo las instrucciones.`,
+      },
     ];
   }
 
   buildChatMessages(
+    conversationKind: ConversationKind,
     summaryContent: string | null,
     history: LlmChatMessage[],
-    nextUserMessage: string
+    nextUserMessage: string,
   ): LlmChatMessage[] {
-    const template = this.getTemplate("chat");
+    const template =
+      conversationKind === "general" ? this.getTemplate("general_chat") : this.getTemplate("chat");
+
     const messages: LlmChatMessage[] = [{ role: "system", content: template.system }];
 
-    if (summaryContent) {
+    if (conversationKind !== "general" && summaryContent) {
       messages.push({
         role: "system",
-        content: `Resumen clinico de referencia (contexto base de la conversacion):\n\n${summaryContent}`
+        content: `Resumen clinico de referencia (contexto base de la conversacion):\n\n${summaryContent}`,
       });
     }
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const summaryKindSchema = z.enum(["medical_record", "evolution"]);
+export const conversationKindSchema = z.enum(["medical_record", "evolution", "general"]);
 export const modelPreferenceSchema = z.enum(["deepseek", "auto"]);
 
 export const generateSummarySchema = z.object({

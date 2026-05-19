@@ -2,6 +2,13 @@ import type { LlmProviderName, ModelPreference, SummaryKind } from "./Summary.js
 
 export type MessageRole = "system" | "user" | "assistant";
 
+/**
+ * Las conversaciones pueden estar atadas a una HC ('medical_record'),
+ * a una EM ('evolution') o ser libres ('general' = el usuario consulta
+ * dudas medicas sin entityId).
+ */
+export type ConversationKind = SummaryKind | "general";
+
 export interface AiMessage {
   id: string;
   conversationId: string;
@@ -18,8 +25,8 @@ export interface AiConversation {
   id: string;
   clientId: string;
   summaryId: string | null;
-  kind: SummaryKind;
-  entityId: string;
+  kind: ConversationKind;
+  entityId: string | null;
   userId: string;
   title: string | null;
   modelPreference: ModelPreference;
@@ -30,8 +37,8 @@ export interface AiConversation {
 export interface CreateConversationInput {
   clientId: string;
   summaryId: string | null;
-  kind: SummaryKind;
-  entityId: string;
+  kind: ConversationKind;
+  entityId: string | null;
   userId: string;
   title: string | null;
   modelPreference: ModelPreference;

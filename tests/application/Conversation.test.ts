@@ -26,7 +26,8 @@ function buildHarness(responder?: (input: { messages: Array<{ role: string; cont
   const prompts = new PromptBuilder({
     medicalRecord: "medical-record-v1",
     evolution: "evolution-v1",
-    chat: "chat-system-v1"
+    chat: "chat-system-v1",
+    generalChat: "general-chat-v1",
   });
 
   const start = new StartConversationUseCase({ conversations, summaries });
@@ -169,6 +170,85 @@ describe("Conversation use cases", () => {
     await h.del.execute({ clientId: CLIENT, userId: USER, conversationId: conversation.id });
     const remaining = await h.list.execute({ clientId: CLIENT, userId: USER, limit: 10, offset: 0 });
     expect(remaining).toHaveLength(0);
+  });
+
+  it("crea conversaciones 'general' con entityId null y sin summary", async () => {
+    const h = buildHarness();
+    const { conversation } = await h.start.execute({
+      clientId: CLIENT,
+      userId: USER,
+      summaryId: null,
+      kind: "general",
+      entityId: null,
+      title: "Duda farmacologia",
+      modelPreference: "auto",
+    });
+    expect(conversation.kind).toBe("general");
+    expect(conversation.entityId).toBeNull();
+    expect(conversation.summaryId).toBeNull();
+  });
+
+  it("rechaza conversaciones 'general' con entityId presente", async () => {
+    const h = buildHarness();
+    await expect(
+      h.start.execute({
+        clientId: CLIENT,
+        userId: USER,
+        summaryId: null,
+        kind: "general",
+        entityId: "mr-1",
+        title: null,
+        modelPreference: "auto",
+      })
+    ).rejects.toThrow(/General/);
+  });
+
+  it("rechaza conversaciones 'medical_record' sin entityId", async () => {
+    const h = buildHarness();
+    await expect(
+      h.start.execute({
+        clientId: CLIENT,
+        userId: USER,
+        summaryId: null,
+        kind: "medical_record",
+        entityId: null,
+        title: null,
+        modelPreference: "auto",
+      })
+    ).rejects.toThrow(/require an entityId/);
+  });
+
+  it("para conversaciones 'general' inyecta el prompt general en el LLM y no el de caso clinico", async () => {
+    let capturedSystem = "";
+    const h = buildHarness((input) => {
+      capturedSystem = input.messages.find((m) => m.role === "system")?.content ?? "";
+      return "ok";
+    });
+
+    const { conversation } = await h.start.execute({
+      clientId: CLIENT,
+      userId: USER,
+      summaryId: null,
+      kind: "general",
+      entityId: null,
+      title: null,
+      modelPreference: "auto",
+    });
+
+    await h.send.execute(
+      {
+        clientId: CLIENT,
+        userId: USER,
+        conversationId: conversation.id,
+        message: "Dosis usual de paracetamol IV adulto?",
+        maxHistoryMessages: 20,
+      },
+      { onChunk: () => {} }
+    );
+
+    expect(capturedSystem).toContain("consulta general");
+    expect(capturedSystem).toContain("RESTRICCION DE DOMINIO");
+    expect(capturedSystem).not.toContain("caso clinico previamente resumido");
   });
 
   it("incluye el resumen previo como contexto del system prompt al chatear", async () => {

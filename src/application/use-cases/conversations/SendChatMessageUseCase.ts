@@ -58,7 +58,12 @@ export class SendChatMessageUseCase {
     });
 
     const history = previousMessages.map((m) => ({ role: m.role, content: m.content }));
-    const messages = this.prompts.buildChatMessages(summary?.content ?? null, history, input.message);
+    const messages = this.prompts.buildChatMessages(
+      conversation.kind,
+      summary?.content ?? null,
+      history,
+      input.message,
+    );
 
     const userMessage = await this.conversations.appendMessage({
       conversationId: conversation.id,

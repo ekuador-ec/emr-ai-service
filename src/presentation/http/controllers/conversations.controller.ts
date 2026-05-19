@@ -52,7 +52,7 @@ export class ConversationsController {
         userId: ctx.userId,
         summaryId: body.summaryId ?? null,
         kind: body.kind,
-        entityId: body.entityId,
+        entityId: body.entityId ?? null,
         title: body.title ?? null,
         modelPreference: body.modelPreference
       });

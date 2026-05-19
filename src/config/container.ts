@@ -48,7 +48,8 @@ export function buildContainer(env: AppEnv): Express {
   const prompts = new PromptBuilder({
     medicalRecord: env.PROMPT_VERSION_MEDICAL_RECORD,
     evolution: env.PROMPT_VERSION_EVOLUTION,
-    chat: env.PROMPT_VERSION_CHAT
+    chat: env.PROMPT_VERSION_CHAT,
+    generalChat: env.PROMPT_VERSION_GENERAL_CHAT,
   });
 
   const fallback: LlmProvider = new MockLlmProvider({ model: "fallback-mock" });

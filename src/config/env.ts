@@ -31,6 +31,7 @@ const envSchema = z
     PROMPT_VERSION_MEDICAL_RECORD: z.string().default("medical-record-v1"),
     PROMPT_VERSION_EVOLUTION: z.string().default("evolution-v1"),
     PROMPT_VERSION_CHAT: z.string().default("chat-system-v1"),
+    PROMPT_VERSION_GENERAL_CHAT: z.string().default("general-chat-v1"),
 
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(30),
     MAX_CHAT_HISTORY_MESSAGES: z.coerce.number().int().positive().default(20),

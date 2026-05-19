@@ -21,7 +21,8 @@ function buildUseCase(responder?: (input: { messages: Array<{ role: string; cont
     prompts: new PromptBuilder({
       medicalRecord: "medical-record-v1",
       evolution: "evolution-v1",
-      chat: "chat-system-v1"
+      chat: "chat-system-v1",
+      generalChat: "general-chat-v1",
     })
   });
   return { useCase, summaries, mock };

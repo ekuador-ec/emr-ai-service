@@ -1,15 +1,15 @@
-import type { AiConversation, MessageRole } from "../../../domain/models/Conversation.js";
+import type { AiConversation, ConversationKind } from "../../../domain/models/Conversation.js";
 import type { ConversationRepository } from "../../../domain/repositories/ConversationRepository.js";
 import type { SummaryRepository } from "../../../domain/repositories/SummaryRepository.js";
-import type { ModelPreference, SummaryKind } from "../../../domain/models/Summary.js";
-import { NotFoundError } from "../../../shared/errors.js";
+import type { ModelPreference } from "../../../domain/models/Summary.js";
+import { DomainError, NotFoundError } from "../../../shared/errors.js";
 
 export interface StartConversationInput {
   clientId: string;
   userId: string;
   summaryId: string | null;
-  kind: SummaryKind;
-  entityId: string;
+  kind: ConversationKind;
+  entityId: string | null;
   title: string | null;
   modelPreference: ModelPreference;
 }
@@ -28,9 +28,30 @@ export class StartConversationUseCase {
   }
 
   async execute(input: StartConversationInput): Promise<StartConversationOutput> {
+    const isGeneral = input.kind === "general";
+
+    if (isGeneral && input.entityId) {
+      throw new DomainError(
+        "VALIDATION_ERROR",
+        "General conversations must not include an entityId",
+      );
+    }
+    if (!isGeneral && !input.entityId) {
+      throw new DomainError(
+        "VALIDATION_ERROR",
+        `Conversations of kind '${input.kind}' require an entityId`,
+      );
+    }
+
     let summaryId: string | null = input.summaryId;
 
     if (summaryId) {
+      if (isGeneral) {
+        throw new DomainError(
+          "VALIDATION_ERROR",
+          "General conversations cannot reference a summaryId",
+        );
+      }
       const exists = await this.summaries.findById(input.clientId, summaryId);
       if (!exists) {
         throw new NotFoundError("Summary not found for the provided clientId");
@@ -38,11 +59,11 @@ export class StartConversationUseCase {
       if (exists.kind !== input.kind || exists.entityId !== input.entityId) {
         throw new NotFoundError("Summary does not match the requested entity");
       }
-    } else {
+    } else if (!isGeneral && input.entityId) {
       const latest = await this.summaries.findLatest({
         clientId: input.clientId,
-        kind: input.kind,
-        entityId: input.entityId
+        kind: input.kind as Exclude<ConversationKind, "general">,
+        entityId: input.entityId,
       });
       summaryId = latest?.id ?? null;
     }
@@ -54,11 +75,9 @@ export class StartConversationUseCase {
       kind: input.kind,
       entityId: input.entityId,
       title: input.title,
-      modelPreference: input.modelPreference
+      modelPreference: input.modelPreference,
     });
 
     return { conversation };
   }
-
-  static readonly assistantRole: MessageRole = "assistant";
 }

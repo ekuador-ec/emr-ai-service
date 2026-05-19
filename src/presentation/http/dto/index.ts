@@ -19,7 +19,7 @@ export interface ConversationDto {
   id: string;
   summaryId: string | null;
   kind: string;
-  entityId: string;
+  entityId: string | null;
   userId: string;
   title: string | null;
   modelPreference: string;

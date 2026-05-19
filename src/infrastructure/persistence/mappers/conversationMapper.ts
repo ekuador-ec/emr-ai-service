@@ -1,12 +1,12 @@
 import type {
   AiConversation,
   AiMessage,
+  ConversationKind,
   MessageRole
 } from "../../../domain/models/Conversation.js";
 import type {
   LlmProviderName,
-  ModelPreference,
-  SummaryKind
+  ModelPreference
 } from "../../../domain/models/Summary.js";
 
 export interface ConversationRow {
@@ -14,7 +14,7 @@ export interface ConversationRow {
   client_id: string;
   summary_id: string | null;
   kind: string;
-  entity_id: string;
+  entity_id: string | null;
   user_id: string;
   title: string | null;
   model_preference: string;
@@ -39,7 +39,7 @@ export function toConversation(row: ConversationRow): AiConversation {
     id: row.id,
     clientId: row.client_id,
     summaryId: row.summary_id,
-    kind: row.kind as SummaryKind,
+    kind: row.kind as ConversationKind,
     entityId: row.entity_id,
     userId: row.user_id,
     title: row.title,
