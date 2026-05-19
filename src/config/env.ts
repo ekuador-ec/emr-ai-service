@@ -34,6 +34,10 @@ const envSchema = z
 
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(30),
     MAX_CHAT_HISTORY_MESSAGES: z.coerce.number().int().positive().default(20),
+
+    CORS_ALLOWED_ORIGINS: z
+      .string()
+      .default("http://localhost:5173,http://127.0.0.1:5173"),
   })
   .superRefine((value, ctx) => {
     if (!value.SUPABASE_SECRET_KEY && !value.SUPABASE_SERVICE_ROLE_KEY) {
@@ -64,6 +68,9 @@ export const env = {
   SUPABASE_SECRET_KEY: resolvedSupabaseSecretKey,
   OPENROUTER_AUTO_MODELS_LIST: raw.OPENROUTER_AUTO_MODELS.split(",")
     .map((m) => m.trim())
+    .filter(Boolean),
+  CORS_ALLOWED_ORIGINS_LIST: raw.CORS_ALLOWED_ORIGINS.split(",")
+    .map((o) => o.trim())
     .filter(Boolean),
 } as const;
 

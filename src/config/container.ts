@@ -120,6 +120,7 @@ export function buildContainer(env: AppEnv): Express {
     conversationsController,
     authMiddleware,
     rateLimiter,
-    trustProxy: env.NODE_ENV === "production" ? 1 : false
+    trustProxy: env.NODE_ENV === "production" ? 1 : false,
+    corsAllowedOrigins: env.CORS_ALLOWED_ORIGINS_LIST,
   });
 }
