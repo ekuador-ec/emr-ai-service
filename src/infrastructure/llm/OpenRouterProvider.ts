@@ -19,6 +19,7 @@ export interface OpenRouterProviderConfig {
   siteUrl?: string;
   siteName?: string;
   defaultMaxTokens?: number;
+  timeoutMs?: number;
 }
 
 const RETRYABLE_STATUS_CODES = new Set([404, 408, 429, 500, 502, 503, 504]);
@@ -53,10 +54,12 @@ export class OpenRouterProvider implements LlmProvider {
     this.client = new OpenAI({
       apiKey: config.apiKey,
       baseURL: config.baseUrl,
-      defaultHeaders: headers
+      defaultHeaders: headers,
+      timeout: config.timeoutMs ?? 90_000,
+      maxRetries: 0
     });
     this.autoModels = config.autoModels;
-    this.defaultMaxTokens = config.defaultMaxTokens ?? 1500;
+    this.defaultMaxTokens = config.defaultMaxTokens ?? 3000;
   }
 
   pickAutoModel(): string {
@@ -66,14 +69,7 @@ export class OpenRouterProvider implements LlmProvider {
 
   private buildRotationOrder(explicitModel: string | undefined): string[] {
     if (explicitModel) return [explicitModel];
-    const start = Math.floor(Math.random() * this.autoModels.length);
-    const ordered: string[] = [];
-    for (let i = 0; i < this.autoModels.length; i++) {
-      const idx = (start + i) % this.autoModels.length;
-      const candidate = this.autoModels[idx];
-      if (candidate) ordered.push(candidate);
-    }
-    return ordered;
+    return this.autoModels.filter((m): m is string => Boolean(m));
   }
 
   async complete(
@@ -94,13 +90,32 @@ export class OpenRouterProvider implements LlmProvider {
         });
 
         const choice = response.choices[0];
-        if (!choice?.message?.content) {
-          throw new LlmProviderError(NO_CONTENT_MARKER, { model });
+        const resolvedModel = response.model ?? model;
+        const content = choice?.message?.content;
+        if (!content || !content.trim()) {
+          const reasoningTokens = response.usage?.completion_tokens ?? 0;
+          logger.warn(
+            { requestedModel: model, resolvedModel, reasoningTokens },
+            reasoningTokens > 0
+              ? "Model burnt completion tokens but returned empty visible content (likely a 'thinking' model)"
+              : "Model returned no content"
+          );
+          throw new LlmProviderError(NO_CONTENT_MARKER, { model: resolvedModel });
         }
 
+        logger.debug(
+          {
+            requestedModel: model,
+            resolvedModel,
+            tokensIn: response.usage?.prompt_tokens ?? null,
+            tokensOut: response.usage?.completion_tokens ?? null
+          },
+          "OpenRouter complete() ok"
+        );
+
         return {
-          content: choice.message.content,
-          model: response.model ?? model,
+          content,
+          model: resolvedModel,
           provider: this.name,
           tokensInput: response.usage?.prompt_tokens ?? null,
           tokensOutput: response.usage?.completion_tokens ?? null
@@ -187,10 +202,21 @@ export class OpenRouterProvider implements LlmProvider {
     }
 
     if (!fullContent.trim()) {
+      logger.warn(
+        { requestedModel: model, resolvedModel, reasoningTokens: tokensOutput ?? 0 },
+        (tokensOutput ?? 0) > 0
+          ? "Stream model burnt completion tokens but returned empty visible content (likely a 'thinking' model)"
+          : "Stream model returned no content"
+      );
       throw new LlmProviderError(NO_CONTENT_MARKER, { model: resolvedModel });
     }
 
     onChunk({ delta: "", done: true });
+
+    logger.debug(
+      { requestedModel: model, resolvedModel, tokensIn: tokensInput, tokensOut: tokensOutput },
+      "OpenRouter stream() ok"
+    );
 
     return {
       provider: this.name,
