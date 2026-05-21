@@ -20,7 +20,8 @@ import { SendChatMessageUseCase } from "../application/use-cases/conversations/S
 import {
   DeleteConversationUseCase,
   GetConversationUseCase,
-  ListConversationsUseCase
+  ListConversationsUseCase,
+  UpdateConversationPreferenceUseCase,
 } from "../application/use-cases/conversations/ConversationQueryUseCases.js";
 import { SummariesController } from "../presentation/http/controllers/summaries.controller.js";
 import { ConversationsController } from "../presentation/http/controllers/conversations.controller.js";
@@ -102,6 +103,7 @@ export function buildContainer(env: AppEnv): Express {
   const listConversations = new ListConversationsUseCase({ conversations });
   const getConversation = new GetConversationUseCase({ conversations });
   const deleteConversation = new DeleteConversationUseCase({ conversations });
+  const updateConversationPreference = new UpdateConversationPreferenceUseCase({ conversations });
 
   const summariesController = new SummariesController({ generateSummary, getLatestSummary });
   const conversationsController = new ConversationsController({
@@ -110,6 +112,7 @@ export function buildContainer(env: AppEnv): Express {
     listConversations,
     getConversation,
     deleteConversation,
+    updateConversationPreference,
     maxChatHistoryMessages: env.MAX_CHAT_HISTORY_MESSAGES
   });
 

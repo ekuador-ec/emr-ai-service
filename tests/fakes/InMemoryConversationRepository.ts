@@ -8,7 +8,8 @@ import type {
 import type {
   ConversationRepository,
   ListConversationsQuery,
-  ListMessagesQuery
+  ListMessagesQuery,
+  UpdatePreferenceInput
 } from "../../src/domain/repositories/ConversationRepository.js";
 
 export class InMemoryConversationRepository implements ConversationRepository {
@@ -50,6 +51,16 @@ export class InMemoryConversationRepository implements ConversationRepository {
     for (let i = this.messages.length - 1; i >= 0; i--) {
       if (this.messages[i]?.conversationId === conversationId) this.messages.splice(i, 1);
     }
+  }
+
+  async updatePreference(input: UpdatePreferenceInput): Promise<AiConversation> {
+    const conv = this.conversations.find(
+      (c) => c.id === input.conversationId && c.clientId === input.clientId,
+    );
+    if (!conv) throw new Error("conversation not found");
+    conv.modelPreference = input.modelPreference;
+    conv.updatedAt = new Date();
+    return conv;
   }
 
   async appendMessage(input: CreateMessageInput): Promise<AiMessage> {

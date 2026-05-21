@@ -11,6 +11,7 @@ export function buildConversationsRouter(
   router.get("/", controller.list);
   router.get("/:id", controller.get);
   router.delete("/:id", controller.delete);
+  router.patch("/:id/preference", controller.updatePreference);
   router.post("/:id/messages", controller.postMessage);
   return router;
 }

@@ -47,5 +47,9 @@ export const sendChatMessageSchema = z.object({
   message: z.string().trim().min(1).max(4000),
 });
 
+export const updateConversationPreferenceSchema = z.object({
+  modelPreference: modelPreferenceSchema,
+});
+
 export type CreateConversationDto = z.infer<typeof createConversationSchema>;
 export type SendChatMessageDto = z.infer<typeof sendChatMessageSchema>;

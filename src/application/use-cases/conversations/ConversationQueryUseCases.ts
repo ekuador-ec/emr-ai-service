@@ -1,5 +1,6 @@
 import type { AiConversation, AiMessage } from "../../../domain/models/Conversation.js";
 import type { ConversationRepository } from "../../../domain/repositories/ConversationRepository.js";
+import type { ModelPreference } from "../../../domain/models/Summary.js";
 import { NotFoundError } from "../../../shared/errors.js";
 
 export interface ListConversationsInput {
@@ -57,5 +58,30 @@ export class DeleteConversationUseCase {
       throw new NotFoundError("Conversation not found");
     }
     await this.conversations.delete(input.clientId, conversation.id);
+  }
+}
+
+export interface UpdateConversationPreferenceInput {
+  clientId: string;
+  userId: string;
+  conversationId: string;
+  modelPreference: ModelPreference;
+}
+
+export class UpdateConversationPreferenceUseCase {
+  private readonly conversations: ConversationRepository;
+  constructor(deps: { conversations: ConversationRepository }) {
+    this.conversations = deps.conversations;
+  }
+  async execute(input: UpdateConversationPreferenceInput): Promise<AiConversation> {
+    const conversation = await this.conversations.findById(input.clientId, input.conversationId);
+    if (!conversation || conversation.userId !== input.userId) {
+      throw new NotFoundError("Conversation not found");
+    }
+    return this.conversations.updatePreference({
+      clientId: input.clientId,
+      conversationId: conversation.id,
+      modelPreference: input.modelPreference,
+    });
   }
 }

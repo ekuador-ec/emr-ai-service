@@ -4,14 +4,16 @@ import type { StartConversationUseCase } from "../../../application/use-cases/co
 import type {
   DeleteConversationUseCase,
   GetConversationUseCase,
-  ListConversationsUseCase
+  ListConversationsUseCase,
+  UpdateConversationPreferenceUseCase
 } from "../../../application/use-cases/conversations/ConversationQueryUseCases.js";
 import { conversationDto, messageDto } from "../dto/index.js";
 import {
   conversationIdParamSchema,
   createConversationSchema,
   listConversationsQuerySchema,
-  sendChatMessageSchema
+  sendChatMessageSchema,
+  updateConversationPreferenceSchema
 } from "../schemas/conversation.schema.js";
 import { requireAuth, type RequestWithAuth } from "../middleware/authMiddleware.js";
 import { SseWriter } from "../sse/SseWriter.js";
@@ -23,6 +25,7 @@ export interface ConversationsControllerDeps {
   listConversations: ListConversationsUseCase;
   getConversation: GetConversationUseCase;
   deleteConversation: DeleteConversationUseCase;
+  updateConversationPreference: UpdateConversationPreferenceUseCase;
   maxChatHistoryMessages: number;
 }
 
@@ -32,6 +35,7 @@ export class ConversationsController {
   private readonly listConversations: ListConversationsUseCase;
   private readonly getConversation: GetConversationUseCase;
   private readonly deleteConversation: DeleteConversationUseCase;
+  private readonly updateConversationPreference: UpdateConversationPreferenceUseCase;
   private readonly maxChatHistoryMessages: number;
 
   constructor(deps: ConversationsControllerDeps) {
@@ -40,6 +44,7 @@ export class ConversationsController {
     this.listConversations = deps.listConversations;
     this.getConversation = deps.getConversation;
     this.deleteConversation = deps.deleteConversation;
+    this.updateConversationPreference = deps.updateConversationPreference;
     this.maxChatHistoryMessages = deps.maxChatHistoryMessages;
   }
 
@@ -107,6 +112,27 @@ export class ConversationsController {
         conversationId: id
       });
       res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  updatePreference = async (
+    req: RequestWithAuth,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const ctx = requireAuth(req);
+      const { id } = conversationIdParamSchema.parse(req.params);
+      const body = updateConversationPreferenceSchema.parse(req.body);
+      const conversation = await this.updateConversationPreference.execute({
+        clientId: ctx.client.id,
+        userId: ctx.userId,
+        conversationId: id,
+        modelPreference: body.modelPreference,
+      });
+      res.status(200).json({ conversation: conversationDto(conversation) });
     } catch (err) {
       next(err);
     }

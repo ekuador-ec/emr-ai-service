@@ -8,7 +8,8 @@ import type {
 import type {
   ConversationRepository,
   ListConversationsQuery,
-  ListMessagesQuery
+  ListMessagesQuery,
+  UpdatePreferenceInput
 } from "../../domain/repositories/ConversationRepository.js";
 import { PersistenceError } from "../../shared/errors.js";
 import {
@@ -87,6 +88,21 @@ export class SupabaseConversationRepository implements ConversationRepository {
       .eq("id", conversationId);
 
     if (error) throw new PersistenceError(`delete conversation failed: ${error.message}`);
+  }
+
+  async updatePreference(input: UpdatePreferenceInput): Promise<AiConversation> {
+    const { data, error } = await this.db
+      .from(CONV_TABLE)
+      .update({ model_preference: input.modelPreference })
+      .eq("client_id", input.clientId)
+      .eq("id", input.conversationId)
+      .select(CONV_COLUMNS)
+      .single();
+
+    if (error || !data) {
+      throw new PersistenceError(`updatePreference failed: ${error?.message ?? "no data"}`);
+    }
+    return toConversation(data as ConversationRow);
   }
 
   async appendMessage(input: CreateMessageInput): Promise<AiMessage> {

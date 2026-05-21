@@ -11,7 +11,8 @@ import { SendChatMessageUseCase } from "../../src/application/use-cases/conversa
 import {
   DeleteConversationUseCase,
   GetConversationUseCase,
-  ListConversationsUseCase
+  ListConversationsUseCase,
+  UpdateConversationPreferenceUseCase,
 } from "../../src/application/use-cases/conversations/ConversationQueryUseCases.js";
 import { PayloadHasher } from "../../src/application/services/PayloadHasher.js";
 import { PromptBuilder } from "../../src/application/services/PromptBuilder.js";
@@ -78,6 +79,7 @@ export function buildHarness(options: BuildHarnessOptions = {}): TestHarness {
   const listConversations = new ListConversationsUseCase({ conversations });
   const getConversation = new GetConversationUseCase({ conversations });
   const deleteConversation = new DeleteConversationUseCase({ conversations });
+  const updateConversationPreference = new UpdateConversationPreferenceUseCase({ conversations });
 
   const summariesController = new SummariesController({ generateSummary, getLatestSummary });
   const conversationsController = new ConversationsController({
@@ -86,6 +88,7 @@ export function buildHarness(options: BuildHarnessOptions = {}): TestHarness {
     listConversations,
     getConversation,
     deleteConversation,
+    updateConversationPreference,
     maxChatHistoryMessages: 20
   });
 
