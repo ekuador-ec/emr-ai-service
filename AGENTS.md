@@ -6,7 +6,7 @@ Este es el **EMR AI Service**: API independiente en Node.js que provee resumenes
 
 ## Stack
 
-- **Runtime:** Node.js 20+
+- **Runtime:** Node.js 22+ (requerido por `@supabase/supabase-js`, que necesita WebSocket nativo; en Node <22 el cliente crashea al instanciarse)
 - **Lenguaje:** TypeScript (ESM, NodeNext)
 - **HTTP:** Express 4
 - **Validacion:** Zod

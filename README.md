@@ -60,3 +60,45 @@ src/
 ```
 
 Consultar `AGENTS.md` para reglas detalladas.
+
+## Despliegue en Railway
+
+El servicio es un proceso Express de larga vida (no serverless). Railway lo corre
+directamente desde el `Dockerfile`.
+
+### Pasos
+
+1. En Railway: **New Project -> Deploy from GitHub repo** y selecciona este repositorio.
+2. Railway detecta `railway.json` y construye con el `Dockerfile` (builder `DOCKERFILE`).
+3. Configura las variables de entorno (ver checklist abajo) en **Variables**.
+4. El deploy queda "live" solo cuando `GET /health` responde `200` (healthcheck configurado en `railway.json`).
+
+### Puerto
+
+No fijes `PORT` manualmente: Railway inyecta su propio `PORT` y la app ya lo lee desde
+`process.env.PORT` (con default 8080 en local). Express escucha en `0.0.0.0` por defecto,
+asi que el enrutamiento de Railway funciona sin cambios.
+
+### Checklist de variables de entorno
+
+Requeridas:
+
+- `NODE_ENV=production`
+- `SUPABASE_URL`
+- `SUPABASE_SECRET_KEY` (o `SUPABASE_SERVICE_ROLE_KEY` como fallback legacy)
+- `OPENROUTER_API_KEY` y/o `DEEPSEEK_API_KEY` (al menos un proveedor real; sin ninguno cae al mock)
+- `CORS_ALLOWED_ORIGINS` con el origen de produccion del frontend (no usar `*`)
+
+Opcionales (tienen default, ajustar si aplica): `LOG_LEVEL`, `DEEPSEEK_BASE_URL`,
+`DEEPSEEK_MODEL`, `OPENROUTER_BASE_URL`, `OPENROUTER_SITE_URL`, `OPENROUTER_SITE_NAME`,
+`OPENROUTER_AUTO_MODELS`, `PROMPT_VERSION_*`, `RATE_LIMIT_PER_MINUTE`,
+`MAX_CHAT_HISTORY_MESSAGES`. Referencia completa en `.env.example`.
+
+### Verificacion post-deploy
+
+```bash
+curl https://<tu-servicio>.up.railway.app/health
+# -> { "status": "ok", "timestamp": "...", "uptimeSeconds": N, "version": "...", "environment": "production" }
+```
+
+Las rutas `/v1/**` requieren los headers `X-Api-Key` y `Authorization: Bearer <jwt>`.
