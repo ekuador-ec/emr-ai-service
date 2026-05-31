@@ -171,5 +171,8 @@ describe("GET /health", () => {
     expect(response.status).toBe(200);
     expect(response.body.status).toBe("ok");
     expect(response.body.timestamp).toBeTruthy();
+    expect(typeof response.body.uptimeSeconds).toBe("number");
+    expect(response.body.version).toBeTruthy();
+    expect(response.body.environment).toBeTruthy();
   });
 });

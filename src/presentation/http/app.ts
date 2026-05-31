@@ -2,7 +2,7 @@ import express, { type Express, type RequestHandler } from "express";
 import cors from "cors";
 import type { SummariesController } from "./controllers/summaries.controller.js";
 import type { ConversationsController } from "./controllers/conversations.controller.js";
-import { healthHandler } from "./controllers/health.controller.js";
+import { createHealthHandler, type HealthInfo } from "./controllers/health.controller.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { buildSummariesRouter } from "./routes/summaries.routes.js";
@@ -15,6 +15,7 @@ export interface BuildAppDeps {
   rateLimiter?: RequestHandler;
   trustProxy?: boolean | number;
   corsAllowedOrigins?: string[];
+  health?: HealthInfo;
 }
 
 export function buildApp(deps: BuildAppDeps): Express {
@@ -45,7 +46,8 @@ export function buildApp(deps: BuildAppDeps): Express {
   app.use(express.json({ limit: "1mb" }));
   app.use(requestLogger);
 
-  app.get("/health", healthHandler);
+  const health = deps.health ?? { version: "unknown", environment: "unknown" };
+  app.get("/health", createHealthHandler(health));
 
   if (deps.rateLimiter) app.use("/v1", deps.rateLimiter);
 

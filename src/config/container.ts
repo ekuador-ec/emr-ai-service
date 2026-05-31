@@ -126,5 +126,9 @@ export function buildContainer(env: AppEnv): Express {
     rateLimiter,
     trustProxy: env.NODE_ENV === "production" ? 1 : false,
     corsAllowedOrigins: env.CORS_ALLOWED_ORIGINS_LIST,
+    health: {
+      version: process.env.npm_package_version ?? "unknown",
+      environment: env.NODE_ENV,
+    },
   });
 }
