@@ -4,6 +4,20 @@ import type { SummaryRepository } from "../../../domain/repositories/SummaryRepo
 import type { LlmRouter, LlmStreamChunk } from "../../../domain/services/LlmProvider.js";
 import type { PromptBuilder } from "../../services/PromptBuilder.js";
 import { LlmProviderError, NotFoundError } from "../../../shared/errors.js";
+import { logger } from "../../../shared/logger.js";
+
+const MAX_TITLE_LENGTH = 80;
+
+function sanitizeTitle(raw: string): string | null {
+  const firstLine = raw.split("\n").map((l) => l.trim()).find((l) => l.length > 0) ?? "";
+  const cleaned = firstLine
+    .replace(/^["'`*#\s-]+/, "")
+    .replace(/["'`*\s.]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return null;
+  return cleaned.length > MAX_TITLE_LENGTH ? `${cleaned.slice(0, MAX_TITLE_LENGTH).trim()}...` : cleaned;
+}
 
 export interface SendChatMessageInput {
   clientId: string;
@@ -17,6 +31,7 @@ export interface SendChatMessageStreamHandlers {
   onConversation?: (conversation: AiConversation) => void;
   onChunk: (chunk: LlmStreamChunk) => void;
   onCompleted?: (userMessage: AiMessage, assistantMessage: AiMessage) => void;
+  onTitle?: (conversation: AiConversation) => void;
 }
 
 export class SendChatMessageUseCase {
@@ -98,5 +113,37 @@ export class SendChatMessageUseCase {
     });
 
     handlers.onCompleted?.(userMessage, assistantMessage);
+
+    const isFirstExchange = previousMessages.length === 0;
+    if (conversation.kind === "general" && isFirstExchange) {
+      await this.generateTitle(conversation, input.message, result.fullContent, provider, handlers);
+    }
+  }
+
+  private async generateTitle(
+    conversation: AiConversation,
+    firstUserMessage: string,
+    assistantReply: string,
+    provider: ReturnType<LlmRouter["pick"]>,
+    handlers: SendChatMessageStreamHandlers,
+  ): Promise<void> {
+    try {
+      const titleMessages = this.prompts.buildTitleMessages(firstUserMessage, assistantReply);
+      const completion = await provider.complete(titleMessages, { temperature: 0.2, maxTokens: 24 });
+      const title = sanitizeTitle(completion.content);
+      if (!title) return;
+
+      const updated = await this.conversations.updateTitle({
+        clientId: conversation.clientId,
+        conversationId: conversation.id,
+        title,
+      });
+      handlers.onTitle?.(updated);
+    } catch (error) {
+      logger.warn(
+        { conversationId: conversation.id, err: error instanceof Error ? error.message : "unknown" },
+        "auto title generation failed",
+      );
+    }
   }
 }

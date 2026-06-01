@@ -9,7 +9,8 @@ import type {
   ConversationRepository,
   ListConversationsQuery,
   ListMessagesQuery,
-  UpdatePreferenceInput
+  UpdatePreferenceInput,
+  UpdateTitleInput
 } from "../../domain/repositories/ConversationRepository.js";
 import { PersistenceError } from "../../shared/errors.js";
 import {
@@ -101,6 +102,21 @@ export class SupabaseConversationRepository implements ConversationRepository {
 
     if (error || !data) {
       throw new PersistenceError(`updatePreference failed: ${error?.message ?? "no data"}`);
+    }
+    return toConversation(data as ConversationRow);
+  }
+
+  async updateTitle(input: UpdateTitleInput): Promise<AiConversation> {
+    const { data, error } = await this.db
+      .from(CONV_TABLE)
+      .update({ title: input.title })
+      .eq("client_id", input.clientId)
+      .eq("id", input.conversationId)
+      .select(CONV_COLUMNS)
+      .single();
+
+    if (error || !data) {
+      throw new PersistenceError(`updateTitle failed: ${error?.message ?? "no data"}`);
     }
     return toConversation(data as ConversationRow);
   }

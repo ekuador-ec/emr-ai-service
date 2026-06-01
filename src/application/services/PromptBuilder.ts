@@ -121,6 +121,16 @@ Reglas adicionales del modo "consulta general":
 - Recordatorio explicito en cada respuesta sustantiva: el contenido es de apoyo y no reemplaza el juicio clinico ni la evaluacion presencial del paciente.
 - Responde en espanol, en tono profesional, conciso y enfocado.`;
 
+const TITLE_SYSTEM_PROMPT = `Eres un generador de titulos para conversaciones de un asistente clinico.
+A partir del primer mensaje del usuario (y opcionalmente la respuesta del asistente), produce un titulo muy breve que resuma el tema de la conversacion.
+
+Reglas estrictas:
+- Maximo 6 palabras, en espanol.
+- Sin comillas, sin punto final, sin prefijos como "Titulo:".
+- Usa terminologia clinica concisa cuando aplique (ej. "Manejo de hipertension en embarazo").
+- No incluyas datos identificables del paciente.
+- Responde UNICAMENTE con el titulo, sin texto adicional.`;
+
 export class PromptBuilder {
   private readonly versions: PromptVersions;
 
@@ -173,5 +183,16 @@ export class PromptBuilder {
     messages.push(...history);
     messages.push({ role: "user", content: nextUserMessage });
     return messages;
+  }
+
+  buildTitleMessages(firstUserMessage: string, assistantReply: string | null): LlmChatMessage[] {
+    const reply = assistantReply ? assistantReply.slice(0, 600) : "";
+    const content = reply
+      ? `Mensaje del usuario:\n${firstUserMessage}\n\nRespuesta del asistente:\n${reply}\n\nGenera el titulo.`
+      : `Mensaje del usuario:\n${firstUserMessage}\n\nGenera el titulo.`;
+    return [
+      { role: "system", content: TITLE_SYSTEM_PROMPT },
+      { role: "user", content },
+    ];
   }
 }

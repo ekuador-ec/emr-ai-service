@@ -194,6 +194,9 @@ export class ConversationsController {
                 assistantMessage: messageDto(assistantMessage)
               }
             });
+          },
+          onTitle: (conv) => {
+            sse.send({ event: "title", data: conversationDto(conv) });
           }
         }
       );

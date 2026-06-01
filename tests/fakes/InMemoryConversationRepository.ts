@@ -9,7 +9,8 @@ import type {
   ConversationRepository,
   ListConversationsQuery,
   ListMessagesQuery,
-  UpdatePreferenceInput
+  UpdatePreferenceInput,
+  UpdateTitleInput
 } from "../../src/domain/repositories/ConversationRepository.js";
 
 export class InMemoryConversationRepository implements ConversationRepository {
@@ -59,6 +60,16 @@ export class InMemoryConversationRepository implements ConversationRepository {
     );
     if (!conv) throw new Error("conversation not found");
     conv.modelPreference = input.modelPreference;
+    conv.updatedAt = new Date();
+    return conv;
+  }
+
+  async updateTitle(input: UpdateTitleInput): Promise<AiConversation> {
+    const conv = this.conversations.find(
+      (c) => c.id === input.conversationId && c.clientId === input.clientId,
+    );
+    if (!conv) throw new Error("conversation not found");
+    conv.title = input.title;
     conv.updatedAt = new Date();
     return conv;
   }

@@ -221,7 +221,9 @@ describe("Conversation use cases", () => {
   it("para conversaciones 'general' inyecta el prompt general en el LLM y no el de caso clinico", async () => {
     let capturedSystem = "";
     const h = buildHarness((input) => {
-      capturedSystem = input.messages.find((m) => m.role === "system")?.content ?? "";
+      if (!capturedSystem) {
+        capturedSystem = input.messages.find((m) => m.role === "system")?.content ?? "";
+      }
       return "ok";
     });
 
@@ -249,6 +251,89 @@ describe("Conversation use cases", () => {
     expect(capturedSystem).toContain("consulta general");
     expect(capturedSystem).toContain("RESTRICCION DE DOMINIO");
     expect(capturedSystem).not.toContain("caso clinico previamente resumido");
+  });
+
+  it("genera y persiste un titulo automatico en el primer intercambio de una conversacion general", async () => {
+    const h = buildHarness((input) => {
+      const isTitleRequest = input.messages.some((m) => m.content.includes("Genera el titulo"));
+      return isTitleRequest ? "Dosis de paracetamol IV" : "Respuesta del asistente mock.";
+    });
+
+    const { conversation } = await h.start.execute({
+      clientId: CLIENT,
+      userId: USER,
+      summaryId: null,
+      kind: "general",
+      entityId: null,
+      title: null,
+      modelPreference: "auto",
+    });
+
+    let emittedTitle: string | null | undefined;
+    await h.send.execute(
+      {
+        clientId: CLIENT,
+        userId: USER,
+        conversationId: conversation.id,
+        message: "Dosis usual de paracetamol IV adulto?",
+        maxHistoryMessages: 20,
+      },
+      {
+        onChunk: () => {},
+        onTitle: (conv) => {
+          emittedTitle = conv.title;
+        },
+      }
+    );
+
+    expect(emittedTitle).toBe("Dosis de paracetamol IV");
+
+    const stored = await h.get.execute({
+      clientId: CLIENT,
+      userId: USER,
+      conversationId: conversation.id,
+      messageLimit: 20,
+    });
+    expect(stored.conversation.title).toBe("Dosis de paracetamol IV");
+  });
+
+  it("no genera titulo automatico para conversaciones clinicas (medical_record/evolution)", async () => {
+    const h = buildHarness();
+    const { conversation } = await h.start.execute({
+      clientId: CLIENT,
+      userId: USER,
+      summaryId: null,
+      kind: "evolution",
+      entityId: "ev-1",
+      title: "Evolucion 12/05",
+      modelPreference: "auto",
+    });
+
+    let titleEmitted = false;
+    await h.send.execute(
+      {
+        clientId: CLIENT,
+        userId: USER,
+        conversationId: conversation.id,
+        message: "Que examenes complementarios sugieres?",
+        maxHistoryMessages: 20,
+      },
+      {
+        onChunk: () => {},
+        onTitle: () => {
+          titleEmitted = true;
+        },
+      }
+    );
+
+    expect(titleEmitted).toBe(false);
+    const stored = await h.get.execute({
+      clientId: CLIENT,
+      userId: USER,
+      conversationId: conversation.id,
+      messageLimit: 20,
+    });
+    expect(stored.conversation.title).toBe("Evolucion 12/05");
   });
 
   it("incluye el resumen previo como contexto del system prompt al chatear", async () => {
